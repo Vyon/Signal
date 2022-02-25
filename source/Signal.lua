@@ -8,7 +8,7 @@
 			Constructs an object from the signal class.
 
 			@params: None
-			@ret: signal: Dictionary<string>
+			@ret: (signal: Dictionary<string>)
 
 		Connect( self, callback ):
 			Creates a new thread to handle the callback.
