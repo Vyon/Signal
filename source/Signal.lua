@@ -17,13 +17,13 @@
 			@ret: (connection: Dictionary<string>)
 
 		Disconnect():
-			Closes the handler thread and removes it from _Connections for cleanup
+			Closes the handler thread and removes it from _Callbacks for cleanup
 
 			@params: None
 			@ret: nil
 
 		Fire( self, ... ):
-			Loops through all saved connections and fires to each of them with the given arguments
+			Loops through all saved callbacks and fires to each of them with the given arguments
 
 			@params: (self: Dictionary<string>, ...: any)
 			@ret: nil
@@ -41,29 +41,26 @@ signal.__type = 'LunarScriptSignal'
 
 function signal.New()
 	local self = setmetatable({}, signal)
-	self._Connections = {}
+	self._Callbacks = {}
 	self._Args = nil
 
 	return self
 end
 
 function signal:Connect(callback: any)
-	local index = #self._Connections + 1
-	table.insert(self._Connections, coroutine.create(callback))
+	local index = #self._Callbacks + 1
+	table.insert(self._Callbacks, callback)
 
 	return {
 		Disconnect = function()
-			local routine = self._Connections[index]
-			coroutine.close(routine)
-
-			self._Connections[index] = nil
+			self._Callbacks[index] = nil
 		end
 	}
 end
 
 function signal:Fire(...)
-	for _, routine in pairs(self._Connections) do
-		coroutine.resume(routine, ...)
+	for _, callback in pairs(self._Callbacks) do
+		task.spawn(callback, ...)
 	end
 
 	self._Args = {...}
