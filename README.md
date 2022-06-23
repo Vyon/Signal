@@ -1,35 +1,59 @@
 # Signal
-This module was written by @Vyon, and is another way to create and handle custom signals without the use of filthy instance modules that use bindable events! (jokes)
+This "class" was written by @Vyon, and is used to replicate the functionality of RBXScriptSignals with an added touch.
+Kinda wish roblox had decided to make the RBXScriptSignal class usable, but they didn't lmao.
 
-Feel free to modify to your hearts desire
+# Documentation
 
-# Methods
-## New():
-	Constructs an object from the signal class.
+## Signal.New
+Creates a new Signal object.
 
-	@params: None
-	@ret: signal: Dictionary<string>
+	@params: nil
+	@ret: (Signal: signal)
 
-## Connect( self, callback ):
-	Creates a new thread to handle the callback.
+## Signal:Connect
+Connects a function to the Signal.
+
+	@params: (Function: any)
+	@ret: (Connection: Connection)
+
+## Signal:ConnectOnce
+Like Signal:Connect but instead disconnects the function after 1 call.
+
+	@params: (Function: any)
+	@ret: (Connection: Connection)
+
+## Signal:Fire
+Calls all connection callbacks.
+
+	@params: (...: any)
+	@ret: nil
 	
-	@params: (self: Dictionary<string>, callback: Function)
-	@ret: (connection: Dictionary<string>)
+## Signal:Wait
+Waits for the signal to fire.
 
-## Disconnect():
-	Closes the handler thread and removes it from _Connections for cleanup
-			
-	@params: None
+	@params: nil
+	@ret: (...: any)
+
+## Signal:DisconnectAll
+Disconnects all functions from the Signal.
+
+	@params: nil
 	@ret: nil
 
-## Fire( self, ... ):
-	Loops through all saved connections and fires to eachof them with the given arguments
-	
-	@params: (self: Dictionary<string>, ...: any)
+## Signal:Destroy
+Alias for "DisconnectAll"
+
+	@params: nil
 	@ret: nil
 
-## Wait():
-	Yields the current thread until the fire method is used.
-			
-	@params: None
-	@ret: (arguments: Array<number>)
+## Connection.New
+Creates a new Connection object.
+
+	@params: (Signal: signal, Func: any)
+	@ret: (Connection: Connection)
+
+## Connection:Disconnect
+Disconnects the given connection from the Signal object.
+
+	@params: nil
+	@ret: nil

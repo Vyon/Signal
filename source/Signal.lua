@@ -1,83 +1,145 @@
 --[[
-	This module was written by @Vyon, and is another way to create and handle custom signals without the use of filthy instances like
-	bindable events! (jokes)
-
 	[Signal.lua]:
-	[Methods]:
-		New():
-			Constructs an object from the signal class.
+		This "class" was written by @Vyon, and is used to replicate the functionality of RBXScriptSignals with an added touch.
+		Kinda wish roblox had decided to make the RBXScriptSignal class usable, but they didn't lmao.
 
-			@params: None
-			@ret: signal: Dictionary<string>
+	[DOCUMENTATION]:
+		[Signal Methods]:
+			[Signal.New]: - Creates a new Signal object.
+				@params: nil
+				@ret: (Signal: signal)
 
-		Connect( self, callback ):
-			Creates a new thread to handle the callback.
+			[Signal:Connect]: - Connects a function to the Signal.
+				@params: (Function: any)
+				@ret: (Connection: Connection)
 
-			@params: (self: Dictionary<string>, callback: Function)
-			@ret: (connection: Dictionary<string>)
+			[Signal:ConnectOnce]: - Like Signal:Connect but instead disconnects the function after 1 call.
+				@params: (Function: any)
+				@ret: (Connection: Connection)
 
-		Disconnect():
-			Closes the handler thread and removes it from _Connections for cleanup
+			[Signal:Fire]: - Calls all connection callbacks.
+				@params: (...: any)
+				@ret: nil
 
-			@params: None
-			@ret: nil
+			[Signal:Wait]: - Waits for the Signal to fire.
+				@params: nil
+				@ret: (...: any)
 
-		Fire( self, ... ):
-			Loops through all saved connections and fires to each of them with the given arguments
+			[Signal:DisconnectAll]: - Disconnects all functions from the Signal.
+				@params: nil
+				@ret: nil
 
-			@params: (self: Dictionary<string>, ...: any)
-			@ret: nil
+			[Signal:Destroy]: - Alias for "DisconnectAll".
+				@params: nil
+				@ret: nil
 
-		Wait():
-			Yields the current thread until the fire method is used.
+		[Connection Methods]:
+			[Connection.New]: - Creates a new Connection object.
+				@params: (Signal: signal, Func: any)
+				@ret: (Connection: Connection)
 
-			@params: None
-			@ret: (arguments: Array<number>)
+			[Connection:Disconnect]: - Disconnects the given connection from the Signal object.
+				@params: nil
+				@ret: nil
 --]]
+
+-- Types:
+type Signal = {
+	Callbacks: Array<any>,
+	Connections: Array<any>,
+	Args: any
+}
+
+type Connection = {
+	Function: any,
+	Signal: Signal,
+	ConnectionId: number,
+	IsConnected: boolean
+}
+
+-- Main Module:
+local connection = {}
+connection.__index = connection
+
+-- Connections Methods:
+function connection.New(signal: Signal, func: any)
+	local self = {}
+	self.Function = func
+	self.Signal = signal
+	self.ConnectionId = #signal.Connections + 1
+	self.IsConnected = true
+
+	return setmetatable(self, connection)
+end
+
+function connection:Disconnect()
+	self.IsConnected = false
+	self.Signal.Connections[self.ConnectionId] = nil
+	self.Signal = nil
+
+	setmetatable(self, nil)
+end
 
 local signal = {}
 signal.__index = signal
-signal.__type = 'LunarScriptSignal'
 
+-- Signal Methods:
 function signal.New()
 	local self = setmetatable({}, signal)
-	self._Connections = {}
-	self._Args = nil
+	self.Connections = {}
+	self.Args = nil
 
 	return self
 end
 
 function signal:Connect(callback: any)
-	local index = #self._Connections + 1
-	table.insert(self._Connections, coroutine.create(callback))
+	local conn: Connection = connection.New(self, callback)
+	table.insert(self.Connections, conn)
 
-	return {
-		Disconnect = function()
-			local routine = self._Connections[index]
-			coroutine.close(routine)
-
-			self._Connections[index] = nil
-		end
-	}
+	return conn
 end
 
-function signal:Fire(...)
-	for _, routine in pairs(self._Connections) do
-		coroutine.resume(routine, ...)
+function signal:ConnectOnce(callback: any)
+	local conn: Connection
+
+	conn = connection.New(self, function(...)
+		conn:Disconnect()
+		pcall(callback, ...)
+	end)
+
+	table.insert(self.Connections, conn)
+
+	return conn
+end
+
+function signal:DisconnectAll()
+	for i = 1, #self.Connections do
+		self.Connections[i]:Disconnect()
+	end
+end
+
+function signal:Fire(...: any)
+	for _, conn: Connection in ipairs(self.Connections) do
+		task.spawn(conn.Function, ...)
 	end
 
-	self._Args = {...}
+	self.Args = {...}
 
 	task.wait()
 
-	self._Args = nil
+	self.Args = nil
 end
 
 function signal:Wait()
-	local _Args = nil
+	local args = nil
 
-	repeat _Args = self._Args task.wait() until _Args
-	return _Args
+	repeat args = self._Args task.wait() until args
+
+	return unpack(args)
+end
+
+function signal:Destroy()
+	self:DisconnectAll()
 end
 
 return signal
